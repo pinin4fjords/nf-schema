@@ -31,6 +31,15 @@ public class Common {
         return "${baseDir}/${schemaFilename}"
     }
 
+    // A schema referenced from another schema is looked up next to the schema that references it first,
+    // then relative to the project, so that a schema keeps working when its pipeline is run from elsewhere
+    static String getReferencedSchemaPath(String schemaDir, String baseDir, String schemaFilename) {
+        if (schemaDir && !Path.of(schemaFilename).isAbsolute() && Path.of(schemaDir, schemaFilename).exists()) {
+            return Path.of(schemaDir, schemaFilename).toString()
+        }
+        return getBasePath(baseDir, schemaFilename)
+    }
+
     //
     // Function to get the value from a JSON pointer
     //

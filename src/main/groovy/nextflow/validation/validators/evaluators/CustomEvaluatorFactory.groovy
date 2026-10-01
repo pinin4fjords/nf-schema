@@ -20,6 +20,8 @@ class CustomEvaluatorFactory implements EvaluatorFactory {
 
     final private ValidationConfig config
     final private String baseDir
+    // directory of the schema being validated, for the schemas it references
+    String schemaDir
 
     CustomEvaluatorFactory(ValidationConfig configInput) {
         Session session = Global.session
@@ -44,7 +46,7 @@ class CustomEvaluatorFactory implements EvaluatorFactory {
         } else if (fieldName == 'exists' && schemaNode.boolean) {
             return Optional.of(new ExistsEvaluator(schemaNode.asBoolean()))
         } else if (fieldName == 'schema' && schemaNode.string) {
-            return Optional.of(new SchemaEvaluator(schemaNode.asString(), this.baseDir, this.config))
+            return Optional.of(new SchemaEvaluator(schemaNode.asString(), this.baseDir, this.schemaDir, this.config))
         } else if (fieldName == 'uniqueEntries' && schemaNode.array) {
             return Optional.of(new UniqueEntriesEvaluator(schemaNode.asArray()))
         } else if (fieldName == 'type' && (schemaNode.string || schemaNode.array) && config.lenientMode) {

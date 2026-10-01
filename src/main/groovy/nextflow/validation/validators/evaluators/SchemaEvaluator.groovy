@@ -1,6 +1,6 @@
 package nextflow.validation.validators.evaluators
 
-import static nextflow.validation.utils.Common.getBasePath
+import static nextflow.validation.utils.Common.getReferencedSchemaPath
 import static nextflow.validation.utils.FilesHelper.fileToJson
 
 import org.json.JSONObject
@@ -28,10 +28,12 @@ class SchemaEvaluator implements Evaluator {
 
     private final String schema
     private final String baseDir
+    private final String schemaDir
     private final ValidationConfig config
 
-    SchemaEvaluator(String schema, String baseDir, ValidationConfig config) {
+    SchemaEvaluator(String schema, String baseDir, String schemaDir, ValidationConfig config) {
         this.baseDir = baseDir
+        this.schemaDir = schemaDir
         this.schema = schema
         this.config = config
     }
@@ -56,7 +58,7 @@ class SchemaEvaluator implements Evaluator {
 
         log.debug("Started validating ${file}")
 
-        String schemaFull = getBasePath(this.baseDir, this.schema)
+        String schemaFull = getReferencedSchemaPath(this.schemaDir, this.baseDir, this.schema)
         Object json = fileToJson(file, Path.of(schemaFull))
         JsonSchemaValidator validator = new JsonSchemaValidator(config)
 

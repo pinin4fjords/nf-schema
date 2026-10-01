@@ -30,14 +30,16 @@ import nextflow.validation.validators.evaluators.CustomEvaluatorFactory
 public class JsonSchemaValidator {
 
     final private ValidatorFactory validator
+    final private CustomEvaluatorFactory customEvaluators
     final private ValidationConfig config
 
     JsonSchemaValidator(ValidationConfig config) {
+        this.customEvaluators = new CustomEvaluatorFactory(config)
         this.validator = new ValidatorFactory()
             .withJsonNodeFactory(new OrgJsonNode.Factory())
             // .withDialect() // TODO define the dialect
             .withEvaluatorFactory(
-                EvaluatorFactory.compose(new CustomEvaluatorFactory(config), new FormatEvaluatorFactory())
+                EvaluatorFactory.compose(this.customEvaluators, new FormatEvaluatorFactory())
             )
         this.config = config
     }
@@ -71,6 +73,7 @@ public class JsonSchemaValidator {
             """)
             throw new SchemaValidationException('', [])
         }
+        this.customEvaluators.schemaDir = Path.of(schemaFileName).toAbsolutePath().parent?.toString()
         Validator.Result result = this.validator.validate(schema, input)
         return new ValidationResult(result, rawJson, schemaString, this.config)
     }
