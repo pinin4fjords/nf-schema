@@ -124,7 +124,7 @@ class ParameterValidator {
         final Map options = [:],
         Session session
     ) {
-        Map<String, Object> params = replaceDataflowParams(initialiseExpectedParams(session.params), session.cliParams)
+        Map<String, Object> params = replaceDataflowParams(initialiseExpectedParams(session.params), session)
         String schemaFilename = options?.containsKey('parameters_schema') ?
             options.parameters_schema as String :
             config.parametersSchema as String
@@ -224,13 +224,15 @@ class ParameterValidator {
 
     //
     // Channel and Value params hold live dataflow objects, and serialising them blocks forever.
-    // The value given on the command line is validated in their place, and a param that was not
-    // given on the command line is left out.
+    // The value they were created from (given on the command line, else set in the config) is
+    // validated in their place, and a param without one is left out.
     //
-    private Map<String, Object> replaceDataflowParams(Map<String, Object> params, Map cliParams) {
+    private Map<String, Object> replaceDataflowParams(Map<String, Object> params, Session session) {
+        Map configParams = (session.config?.params ?: [:]) as Map
         return params.collectEntries { String name, Object value ->
             if (isDataflowValue(value)) {
-                return cliParams?.containsKey(name) ? [(name): cliParams[name]] : [:]
+                Object source = session.cliParams?.containsKey(name) ? session.cliParams[name] : configParams[name]
+                return source != null && !isDataflowValue(source) ? [(name): source] : [:]
             }
             return [(name): value]
         } as Map<String, Object>
