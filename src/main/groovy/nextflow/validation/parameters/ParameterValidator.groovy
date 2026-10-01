@@ -124,7 +124,7 @@ class ParameterValidator {
         final Map options = [:],
         Session session
     ) {
-        Map<String, Object> params = initialiseExpectedParams(session.params)
+        Map<String, Object> params = replaceDataflowParams(initialiseExpectedParams(session.params), session.cliParams)
         String schemaFilename = options?.containsKey('parameters_schema') ?
             options.parameters_schema as String :
             config.parametersSchema
@@ -213,6 +213,28 @@ class ParameterValidator {
     private List<String> getErrors() { return errors }
 
     private List<String> getWarnings() { return warnings }
+
+    //
+    // Matched by package because the dataflow classes are not on the plugin's compile classpath
+    //
+    private static boolean isDataflowValue(Object value) {
+        String className = value?.getClass()?.name ?: ''
+        return className.startsWith('groovyx.gpars.dataflow.') || className.startsWith('nextflow.dataflow.')
+    }
+
+    //
+    // Channel and Value params hold live dataflow objects, and serialising them blocks forever.
+    // The value given on the command line is validated in their place, and a param that was not
+    // given on the command line is left out.
+    //
+    private Map<String, Object> replaceDataflowParams(Map<String, Object> params, Map cliParams) {
+        return params.collectEntries { String name, Object value ->
+            if (isDataflowValue(value)) {
+                return cliParams?.containsKey(name) ? [(name): cliParams[name]] : [:]
+            }
+            return [(name): value]
+        } as Map<String, Object>
+    }
 
     //
     // Initialise expected params if not present

@@ -3,6 +3,7 @@
 package nextflow.validation
 
 import groovy.transform.CompileDynamic
+import spock.lang.Timeout
 
 import java.nio.file.Path
 
@@ -102,6 +103,33 @@ class ValidateParametersTest extends Dsl2Spec {
 
 '''
         !stdout
+    }
+
+    @Timeout(60)
+    void 'should not block on a param that holds a dataflow value'() {
+        given:
+        String schema = Path.of('src/testResources/nextflow_schema.json').toAbsolutePath()
+        String script = String.format('''
+            include { validateParameters } from 'plugin/nf-schema'
+
+            params.input = new groovyx.gpars.dataflow.DataflowVariable()
+            params.outdir = 'src/testResources/testDir'
+            validateParameters(parameters_schema: '%s')
+        ''', schema)
+
+        when:
+        Map config = ['validation': [
+            'monochromeLogs': true
+        ]]
+        new MockScriptRunner(config).setScript(script).execute()
+
+        then:
+        SchemaValidationException error = thrown(SchemaValidationException)
+        error.message == '''The following invalid input values have been detected:
+
+* Missing required parameter(s): input
+
+'''
     }
 
     void 'should validate a schema with no arguments'() {
