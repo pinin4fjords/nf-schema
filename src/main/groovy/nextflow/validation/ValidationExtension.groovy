@@ -2,6 +2,7 @@ package nextflow.validation
 
 import static nextflow.validation.utils.Colors.getLogColors
 import static nextflow.validation.utils.Common.getBasePath
+import nextflow.validation.utils.Common
 import static nextflow.validation.utils.Common.getLongestKeyLength
 
 import groovy.json.JsonBuilder
@@ -200,7 +201,7 @@ class ValidationExtension extends PluginExtensionPoint {
             options,
             workflow,
             session.baseDir.toString(),
-            session.params
+            Common.replaceDataflowParams(session.params, session.cliParams, session.config?.params)
         )
         }
 

@@ -12,6 +12,7 @@ import nextflow.plugin.extension.PluginExtensionProvider
 import org.junit.Rule
 import org.pf4j.PluginDescriptorFinder
 import spock.lang.Shared
+import spock.lang.Timeout
 import test.Dsl2Spec
 import test.OutputCapture
 import test.MockScriptRunner
@@ -108,6 +109,29 @@ class ParamsSummaryLogTest extends Dsl2Spec {
         noExceptionThrown()
         stdout.size() == 11
         stdout ==~ /.*outdir     : outDir.*/
+    }
+
+    @Timeout(60)
+    void 'should print params summary - a param that holds a dataflow value is left out'() {
+        given:
+        String schema = Path.of('src/testResources/nextflow_schema.json').toAbsolutePath()
+        String script = """
+            params.outdir = "outDir"
+            params.input = new groovyx.gpars.dataflow.DataflowVariable()
+            include { paramsSummaryLog } from 'plugin/nf-schema'
+
+            def summary_params = paramsSummaryLog(workflow, parameters_schema: '$schema')
+            log.info summary_params
+        """
+
+        when:
+        new MockScriptRunner([:]).setScript(script).execute()
+        String stdout = capture.toString()
+
+        then:
+        stdout.contains('outdir')
+        !stdout.contains('DataflowVariable')
+        !stdout.contains('input ')
     }
 
     void 'should print params summary - nested parameters'() {
