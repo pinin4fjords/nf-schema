@@ -225,17 +225,33 @@ class ParameterValidator {
     //
     // Channel and Value params hold live dataflow objects, and serialising them blocks forever.
     // The value they were created from (given on the command line, else set in the config) is
-    // validated in their place, and a param without one is left out.
+    // validated in their place, and a param without one is left out. Params nested in a record
+    // (e.g. the params of an included pipeline) are handled the same way.
     //
     private Map<String, Object> replaceDataflowParams(Map<String, Object> params, Session session) {
-        Map configParams = (session.config?.params ?: [:]) as Map
-        return params.collectEntries { String name, Object value ->
-            if (isDataflowValue(value)) {
-                Object source = session.cliParams?.containsKey(name) ? session.cliParams[name] : configParams[name]
-                return source != null && !isDataflowValue(source) ? [(name): source] : [:]
+        return replaceDataflowValues(params, session.cliParams, session.config?.params) as Map<String, Object>
+    }
+
+    private Object replaceDataflowValues(Object value, Object cliValue, Object configValue) {
+        if (isDataflowValue(value)) {
+            Object source = cliValue != null ? cliValue : configValue
+            return source != null && !isDataflowValue(source) ? source : null
+        }
+        if (value instanceof Map) {
+            Map<Object, Object> result = [:]
+            (value as Map<Object, Object>).each { Object name, Object entry ->
+                Object replaced = replaceDataflowValues(
+                    entry,
+                    cliValue instanceof Map ? (cliValue as Map)[name] : null,
+                    configValue instanceof Map ? (configValue as Map)[name] : null
+                )
+                if (replaced != null || !isDataflowValue(entry)) {
+                    result[name] = replaced
+                }
             }
-            return [(name): value]
-        } as Map<String, Object>
+            return result
+        }
+        return value
     }
 
     //
